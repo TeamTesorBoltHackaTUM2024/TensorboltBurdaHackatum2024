@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import generate
+from app.routers import generate, test
 from app.settings import settings
 
 # App definition
@@ -25,3 +25,4 @@ def root():
 
 # Routers
 app.include_router(generate.router)
+app.include_router(test.router)

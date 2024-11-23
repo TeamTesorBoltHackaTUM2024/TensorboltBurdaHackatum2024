@@ -1,4 +1,8 @@
 __pycache__
 .env
+service-account-file.json
+
 local_data_cache
 .venv
+
+alembic.ini
