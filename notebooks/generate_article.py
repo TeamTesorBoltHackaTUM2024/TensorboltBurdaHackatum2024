@@ -3,9 +3,12 @@ from llama_index.llms.azure_openai import AzureOpenAI
 from llama_index.core.llms import ChatMessage, MessageRole, ChatResponse
 from llama_index.core.llms.structured_llm import StructuredLLM
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 import json
+from enum import Enum
 
+
+################# ARTICLE RELATED MODELS
 
 class GenArticle(BaseModel):
     title: str
@@ -25,6 +28,101 @@ class News(BaseModel):
     content: str
     published: str
     extracted_data: NewsData
+
+#################### PROMPT RELATED MODELS
+
+
+class Tone(Enum):
+    opinionated = 'opinionated'
+    neutral = 'neural'
+
+class Style(Enum):
+    casual = 'casual'
+    formal = 'formal'
+
+class TargetAudiance(Enum):
+    beginners = 'beginners'
+    experts = 'experts'
+    hobbyist = 'hobbyist'
+
+class ArticleLength(Enum):
+    # number of words in the article
+    short = 500
+    medium = 1000
+    long = 2000
+
+class UserPreferences(BaseModel):
+    tone: Optional[Tone]
+    style: Optional[Style]
+    target_audiance: Optional[TargetAudiance]
+    article_length: Optional[ArticleLength]
+
+class SystemPromptBuilder():
+    tone: Optional[Tone] = None
+    style: Optional[Style] = None
+    target_audiance: Optional[TargetAudiance] = None
+    article_length: Optional[ArticleLength] = None
+
+    # should be built using .build
+    _system_prompt = (
+        "You are an expert writer specializing in creating engaging and informative articles. "
+        "Your task is to generate a well-structured and high-quality article. "
+        "Keep the content accurate, creative, and concise. "
+        "If specific preferences such as tone, style, target audience, or length are provided, tailor the article accordingly. "
+        "If no preferences are given, use a neutral tone, a balanced style, and write for a general audience with a moderate length."
+    )
+
+    def __init__(self):
+        pass
+
+    def with_tone(self, tone: Tone | None):
+        self.tone = tone
+        return self
+
+    def with_style(self, style: Style | None):
+        self.style = style
+        return self
+
+    def with_target_audiance(self, target_audiance: TargetAudiance | None):
+        self.target_audiance = target_audiance
+        return self
+
+    def with_article_length(self, article_length: ArticleLength | None):
+        self.article_length = article_length
+        return self
+
+    def build(self) -> str:
+        prompt = self._system_prompt
+
+        match self.tone:
+            case Tone.opinionated:
+                prompt += " Provide a strong perspective on the topic, including your opinions and supporting arguments."
+            case Tone.neutral:
+                prompt += " Maintain an objective and balanced tone, presenting facts without personal bias."
+
+        match self.style:
+            case Style.casual:
+                prompt += " Use a friendly and conversational style, making the content approachable and easy to read."
+            case Style.formal:
+                prompt += " Use a professional and formal style, maintaining a polished and sophisticated tone."
+
+        match self.target_audiance:
+            case TargetAudiance.beginners:
+                prompt += " Write for readers who are new to the topic, explaining concepts in simple terms and avoiding jargon."
+            case TargetAudiance.experts:
+                prompt += " Write for readers with expertise in the topic, using technical language and in-depth analysis."
+            case TargetAudiance.hobbyist:
+                prompt += " Write for hobbyist who enjoy reading electrical cars."
+
+        match self.article_length:
+            case ArticleLength.short:
+                prompt += " Keep the article concise, aiming for approximately 500 words."
+            case ArticleLength.medium:
+                prompt += " Aim for a balanced length, approximately 1000 words, providing enough detail without overwhelming the reader."
+            case ArticleLength.long:
+                prompt += " Write a comprehensive article with approximately 2000 words, covering the topic in-depth with detailed explanations."
+
+        return prompt
 
 def read_news_json_file(file_path: str) -> List[News]:
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -58,21 +156,15 @@ def prepare_input(news_list: List[News]) -> str:
     return "\n\n".join(input)
 
 
-
-class promptbuilde(): pass
-
-
-def generate_article(llm: AzureOpenAI) -> GenArticle:
+def generate_article(llm: AzureOpenAI, prefs: UserPreferences) -> GenArticle:
     news_list: List[News] = read_news_json_file("./rss_feed_entries_1.json")
+
+    # build the system prompt with user preferences
+    system_prompt = SystemPromptBuilder().with_tone(prefs.tone).with_style(prefs.style).with_target_audiance(prefs.target_audiance).with_article_length(prefs.article_length).build()
+
+    # TODO: this prompt might be improved. Currently we concat. header and content
     model_input: str = prepare_input(news_list)
-
-    # universal prompt
-    system_prompt = "You are a professional article author. You generate articles based on the given recent news."
-    # TODO build the prompt based on user prefs
-
-
-    # maybe build this prompt?
-    user_prompt = f"Write an article based on the following news:\n{model_input}"
+    user_prompt = f"Write an article based on the following news:\n\n{model_input}"
 
     sllm: StructuredLLM = llm.as_structured_llm(output_cls=GenArticle)
 
