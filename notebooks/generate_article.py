@@ -3,7 +3,7 @@ from llama_index.llms.azure_openai import AzureOpenAI
 from llama_index.core.llms import ChatMessage, MessageRole, ChatResponse
 from llama_index.core.llms.structured_llm import StructuredLLM
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import json
 from enum import Enum
 
@@ -19,13 +19,12 @@ class NewsData(BaseModel):
     summary: str
     keywords: List[str]
     facts: List[str]
-    important_dates: List[str]
+    important_dates: Dict[str,str] # date,event
 
 class News(BaseModel):
     title: str
     content: str
     authors: List[str]
-    content: str
     published: str
     extracted_data: NewsData
 
@@ -139,7 +138,7 @@ def read_news_json_file(file_path: str) -> List[News]:
         summary: str = ext_data['summary']
         keywords: List[str] = ext_data['keywords']
         facts: List[str] = ext_data['facts']
-        important_dates: List[str] = ext_data['important_dates']
+        important_dates: Dict[str,str] = ext_data['important_dates']
 
         news_data = NewsData(summary=summary, keywords=keywords, facts=facts, important_dates=important_dates)
 
@@ -152,12 +151,14 @@ def prepare_input(news_list: List[News]) -> str:
     """
     prepare newline separated input to the model
     """
-    input = [ news.title + '\n' + news.content for news in news_list ]
+    # this is too bulk, we use the extracted data instead
+    # input = [ news.title + '\n' + news.content for news in news_list ]
+
+    input = [ "\n".join([news.title, news.extracted_data.summary, str(news.extracted_data.keywords), str(news.extracted_data.facts), "\n".join([ date + ': ' + event for date, event in news.extracted_data.important_dates.items() ]) ]) for news in news_list ]
     return "\n\n".join(input)
 
-
 def generate_article(llm: AzureOpenAI, prefs: UserPreferences) -> GenArticle:
-    news_list: List[News] = read_news_json_file("./rss_feed_entries_1.json")
+    news_list: List[News] = read_news_json_file("./rss_feed_entries_2.json")
 
     # build the system prompt with user preferences
     system_prompt = SystemPromptBuilder().with_tone(prefs.tone).with_style(prefs.style).with_target_audiance(prefs.target_audiance).with_article_length(prefs.article_length).build()
