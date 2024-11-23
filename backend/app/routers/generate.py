@@ -2,8 +2,19 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.models.generate import QueryRequest
-from app.services.generate import article_generation_react_agent
+from app.models.generate import UserPreferences, GenArticle
+from app.services.generate import read_news_json_file, generate_article
+from llama_index.llms.azure_openai import AzureOpenAI
+from app.settings import settings
+
+llm = AzureOpenAI(
+    engine=settings.AZURE_OPENAI_ENGINE,
+    model=settings.AZURE_OPENAI_MODEL,
+    api_key=settings.AZURE_OPENAI_API_KEY,
+    azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+    api_version=settings.AZURE_OPENAI_API_VERSION,
+    temperature=0.2
+)
 
 router = APIRouter(
     prefix="/generate",
@@ -11,19 +22,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/")
-async def generate_articles(request: QueryRequest):
-    try:
-        # Use the existing multi-step agent for initial interaction
-        response = article_generation_react_agent.chat(
-            f"""
-            1. Generate ideas for the topic: {request.query}.
-            2. Filter and rank the generated ideas to choose the most relevant ones.
-            3. Write an article with the title 'The Impact of AI on Modern Education' using the selected ideas.
-            4. Analyze the article for potential misinformation.
-            """)
-
-        # Return all results as a structured response
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing query: {e}")
+@router.post("/article")
+def generate(user_prefs: UserPreferences) -> GenArticle:
+    news_list = read_news_json_file("./rss_feed_entries_1.json")
+    return generate_article(llm, user_prefs, news_list)

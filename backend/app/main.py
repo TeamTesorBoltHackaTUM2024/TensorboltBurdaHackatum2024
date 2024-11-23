@@ -8,7 +8,6 @@ import os
 
 from app.routers import generate, test, ingress
 from app.settings import settings
-from app.services.ingress import start_ingress
 
 # App definition
 app = FastAPI(
