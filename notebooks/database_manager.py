@@ -230,9 +230,13 @@ class IndexBuilder:
     def retrieve_clusters_newest_articles(self, amount_of_newest_articles, amount_in_cluster):
         articles = self.find_newest_articles(amount_of_newest_articles)
         search_results = []
+        import time
         for article in articles:
             article_embedding, summary = self.get_article_embedding(article[0])
+            start = time.time()
             search_result = self.find_nearest_documents(article_embedding, top_k=amount_in_cluster)
+            end = time.time()
+            print('time taken:', end - start)
             cleaned_search_result = []
             cluster = {}
             for result in search_result:
@@ -258,6 +262,48 @@ class IndexBuilder:
             search_results.append(cluster)
         return search_results
 
+    def remove_duplicate_points_by_title(self):
+        """
+        Remove duplicate points from the vector store based on the 'title' field.
+        Also removes points where 'full_object' or 'title' is missing.
+        """
+        title_to_point_id = {}
+        points_to_delete = []
+
+        all_points = self.client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=None,
+            limit=1000
+        )
+
+        for point in all_points[0]:
+            payload = point.payload
+            full_object = payload.get('full_object')
+            title = full_object.get('title') if full_object else None
+
+            # If 'full_object' or 'title' is missing, mark the point for deletion
+            if not full_object or title is None:
+                points_to_delete.append(point.id)
+                continue
+
+            # Check for duplicates based on 'title'
+            if title in title_to_point_id:
+                points_to_delete.append(point.id)
+            else:
+                title_to_point_id[title] = point.id
+
+        if points_to_delete:
+            self.client.delete(
+                collection_name=self.collection_name,
+                points_selector=qdrant_client.http.models.PointIdsList(
+                    points=points_to_delete
+                )
+            )
+            logging.info(
+                f"Removed {len(points_to_delete)} points (including duplicates and invalid entries) from the vector store.")
+        else:
+            logging.info("No duplicate or invalid points found in the vector store.")
+
 if __name__ == "__main__":
     json_file_path = "rss_feed_entries_1.json"
     collection_name = "news_feed"
@@ -266,16 +312,17 @@ if __name__ == "__main__":
         json_file_path=json_file_path,
         collection_name=collection_name,
     )
-    import time
-    start = time.time()
+    #index_builder.remove_duplicate_points_by_title()
+    # import time
+    # start = time.time()
     search_results = index_builder.retrieve_clusters_newest_articles(5, 5)
-    end = time.time()
-    print('time:', end - start)
+    # end = time.time()
+    # print('time:', end - start)
+    # # print(search_results[0]["title"])
+    # # print(search_results[0]["image"])
+    # print(search_results[0]["cluster"])
     # print(search_results[0]["title"])
     # print(search_results[0]["image"])
-    print(search_results[0]["cluster"])
-    print(search_results[0]["title"])
-    print(search_results[0]["image"])
     # articles = index_builder.find_newest_articles(5)
     # print('newest_article:', articles[0][0])
     # print('newest_timestamp:', articles[0][1])
