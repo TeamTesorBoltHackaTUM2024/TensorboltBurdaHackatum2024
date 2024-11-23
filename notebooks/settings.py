@@ -5,7 +5,7 @@ from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    load_dotenv()
+    load_dotenv("../backend/app/.env")
 
     # Modify to restrict to origin of your choice
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl | str] = [
