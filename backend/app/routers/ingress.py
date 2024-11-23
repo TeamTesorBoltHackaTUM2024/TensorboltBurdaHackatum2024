@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
 from app.models.ingress import RSSItem, FeedURL, FeedCreate
-from app.services.ingress import handle_feeds
+from app.services.ingress import handle_feeds, add_new_feed
 from app.db_connection import get_db
 
 router = APIRouter(
