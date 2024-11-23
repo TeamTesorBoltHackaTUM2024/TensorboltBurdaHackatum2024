@@ -26,7 +26,7 @@ export function Hero() {
     setLoading(true);
     setTimeout(() => {
       const mockHeroData: HeroData = {
-        title: "Welcome to Our Website",
+        title: "Trending Topics",
         description: "Here is a brief description of the hero section.",
         image: "https://picsum.photos/1800/900",
         primaryCta: {
