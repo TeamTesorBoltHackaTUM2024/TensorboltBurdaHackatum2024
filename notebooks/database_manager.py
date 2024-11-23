@@ -6,6 +6,7 @@ from llama_index.core import VectorStoreIndex, StorageContext, Document
 from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 from llama_index.core import Settings
 import qdrant_client
+from qdrant_client.http.models import PointStruct, Filter, FieldCondition, Match
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from data_processor import llm
 from datetime import datetime
@@ -18,7 +19,7 @@ class IndexBuilder:
         self,
         json_file_path,
         collection_name,
-        embedding_engine="text-embedding-3-small",
+        embedding_engine="text-embedding-3-large",
         api_version="2024-08-01-preview",
     ):
         """
@@ -105,7 +106,7 @@ class IndexBuilder:
         for idx, obj in enumerate(data):
             summary = obj.get("extracted_data", {}).get("summary", "")
             if not summary:
-                logging.warning(
+                print(
                     f"Object at index {idx} is missing 'extracted_data.summary'. Skipping."
                 )
                 continue
@@ -121,7 +122,7 @@ class IndexBuilder:
             )
             self.documents.append(doc)
 
-        logging.info(f"Processed {len(self.documents)} documents from JSON.")
+        print(f"Processed {len(self.documents)} documents from JSON.")
 
     def build_storage_context(self):
         """Build the storage context using the vector store."""
@@ -133,9 +134,6 @@ class IndexBuilder:
         """Build the vector store index from the processed documents."""
         self.index = VectorStoreIndex.from_documents(
             self.documents, storage_context=self.storage_context
-        )
-        logging.info(
-            "VectorStoreIndex has been successfully created and populated."
         )
 
     def get_retriever_engine(self, llm, similarity_top_k=20):
@@ -204,63 +202,6 @@ class IndexBuilder:
 
         return search_results
 
-    # def find_similar_articles_to_newest(self, top_k=10):
-    #     newest_article, newest_timestamp = self.find_newest_article()
-    #     print(f"Newest article ID: {newest_article.id}, Published at: {newest_timestamp}")
-    #
-    #     article_embedding, summary = self.get_article_embedding(newest_article)
-    #     print(f"Summary of the newest article:\n{summary}\n")
-    #
-    #     search_results = self.find_nearest_documents(
-    #         article_embedding=article_embedding,
-    #         exclude_id=newest_article.id,
-    #         top_k=top_k
-    #     )
-    #
-    #     print(f"Top {top_k} articles similar to the newest article:")
-    #     for result in search_results:
-    #         payload = result.payload
-    #         score = result.score
-    #         article_id = payload.get('id')
-    #         title = payload.get('title', 'No Title')
-    #         print(f"Score: {score:.4f}, Article ID: {article_id}, Title: {title}")
-    #
-    #     return search_results
-
-    def retrieve_clusters_newest_articles(self, amount_of_newest_articles, amount_in_cluster):
-        articles = self.find_newest_articles(amount_of_newest_articles)
-        search_results = []
-        import time
-        for article in articles:
-            article_embedding, summary = self.get_article_embedding(article[0])
-            start = time.time()
-            search_result = self.find_nearest_documents(article_embedding, top_k=amount_in_cluster)
-            end = time.time()
-            print('time taken:', end - start)
-            cleaned_search_result = []
-            cluster = {}
-            for result in search_result:
-                cleaned_search_result.append(result.payload['full_object'])
-            cluster["cluster"] = cleaned_search_result
-            titles = [element['title'] for element in cleaned_search_result]
-
-            titles_list = "\n".join(f"- {title}" for title in titles)
-
-            text_generator = TextGenerator(llm)
-
-            input_data = TextGenerator.InputModel(
-                system_prompt=(
-                    "You are a creative assistant. Below is a list of titles grouped into a cluster:\n\n"
-                    f"{titles_list}\n\n"
-                    "Your task is to come up with a single, cohesive title that represents the entire cluster of titles."
-                ),
-                user_prompt="What is the most appropriate title for the cluster as a whole? Provide only the title."
-            )
-            generated_text = text_generator.generate_text(input_data)
-            cluster["title"] = generated_text.content
-            cluster["image"] = cleaned_search_result[0]["media_content"][0]["url"]
-            search_results.append(cluster)
-        return search_results
 
     def remove_duplicate_points_by_title(self):
         """
@@ -299,13 +240,169 @@ class IndexBuilder:
                     points=points_to_delete
                 )
             )
-            logging.info(
+            print(
                 f"Removed {len(points_to_delete)} points (including duplicates and invalid entries) from the vector store.")
         else:
-            logging.info("No duplicate or invalid points found in the vector store.")
+            print("No duplicate or invalid points found in the vector store.")
+
+    def find_top_m_popular_articles(self, n, k, m):
+        """
+        Find the top m most popular articles among the n most recent articles based on the sum of similarity scores
+        of their k nearest documents.
+
+        Args:
+            n (int): Number of the most recent articles to consider.
+            k (int): Number of nearest documents to retrieve for each article.
+            m (int): Number of top popular articles to return.
+
+        Returns:
+            list: A list of the top m articles' full_object payloads sorted by popularity.
+
+        Raises:
+            ValueError: If no articles are found or no valid similarity scores are available.
+        """
+        newest_articles = self.find_newest_articles(n)
+        if not newest_articles:
+            raise ValueError("No newest articles found.")
+
+        article_scores = []
+
+        for idx, (article_point, published_datetime) in enumerate(newest_articles):
+            try:
+                article_embedding, summary = self.get_article_embedding(article_point)
+            except ValueError as e:
+                print(f"Skipping article at index {idx} due to error: {e}")
+                continue
+
+            if article_embedding is None:
+                print(f"Article at index {idx} has no embedding. Skipping.")
+                continue
+
+            search_results = self.find_nearest_documents(article_embedding, top_k=k)
+
+            sum_similarity = sum(hit.score for hit in search_results if hasattr(hit, 'score'))
+
+            print(f"Article ID {article_point.id} - Sum of similarity scores: {sum_similarity}")
+
+            article_payload = article_point.payload.get('full_object')
+            if article_payload:
+                article_scores.append({
+                    'payload': article_payload,
+                    'sum_similarity': sum_similarity
+                })
+
+        if not article_scores:
+            raise ValueError("No articles with valid similarity scores found.")
+
+        # Sort the articles based on sum_similarity in descending order
+        sorted_articles = sorted(article_scores, key=lambda x: x['sum_similarity'], reverse=True)
+
+        # Select the top m articles
+        top_m_articles = sorted_articles[:m]
+
+        print(f"Top {m} popular articles determined based on sum similarity scores.")
+
+        # Extract and return the payloads
+        return [article['payload'] for article in top_m_articles]
+
+
+    def retrieve_clusters_top_m_popular_articles(self, n, k, m):
+        """
+        Retrieve clusters for the top m most popular articles among the n most recent articles.
+
+        For each of the top m popular articles:
+            1. Find the k nearest documents.
+            2. Generate a cohesive title for the cluster.
+            3. Collect an image from the first document in the cluster.
+
+        Args:
+            n (int): Number of the most recent articles to consider for popularity ranking.
+            k (int): Number of nearest documents to retrieve for each popular article.
+            m (int): Number of top popular articles to retrieve clusters for.
+
+        Returns:
+            list: A list of dictionaries, each containing:
+                - 'cluster': List of full_object payloads of the k nearest documents.
+                - 'title': Generated cohesive title for the cluster.
+                - 'image': URL of the image from the first document in the cluster.
+
+        Raises:
+            ValueError: If no popular articles are found or no valid similarity scores are available.
+        """
+        top_m_popular_articles = self.find_top_m_popular_articles(n=n, k=k, m=m)
+        if not top_m_popular_articles:
+            raise ValueError("No popular articles found.")
+
+        search_results = []
+
+        for idx, article_payload in enumerate(top_m_popular_articles):
+            try:
+                summary = article_payload.get('extracted_data', {}).get('summary', '')
+                if not summary:
+                    logging.warning(f"Popular article at index {idx} is missing 'extracted_data.summary'. Skipping.")
+                    continue
+
+                article_embedding = self.embed_model.get_text_embedding(summary)
+            except Exception as e:
+                logging.warning(f"Skipping popular article at index {idx} due to error: {e}")
+                continue
+
+            if article_embedding is None:
+                logging.warning(f"Popular article at index {idx} has no embedding. Skipping.")
+                continue
+
+            search_result = self.find_nearest_documents(article_embedding, top_k=k)
+
+            cleaned_search_result = []
+            cluster = {}
+            for result in search_result:
+                full_object = result.payload.get('full_object')
+                if full_object:
+                    cleaned_search_result.append(full_object)
+
+            if not cleaned_search_result:
+                continue
+
+            cluster["cluster"] = cleaned_search_result
+
+            titles = [element.get('title', 'Untitled') for element in cleaned_search_result]
+
+            titles_list = "\n".join(f"- {title}" for title in titles)
+
+            text_generator = TextGenerator(llm)
+
+            input_data = TextGenerator.InputModel(
+                system_prompt=(
+                    "You are a creative assistant. Below is a list of titles grouped into a cluster:\n\n"
+                    f"{titles_list}\n\n"
+                    "Your task is to come up with a single, cohesive title that represents the entire cluster of titles."
+                ),
+                user_prompt="What is the most appropriate title for the cluster as a whole? Provide only the title."
+            )
+            print('title list:', titles_list)
+            try:
+                generated_text = text_generator.generate_text(input_data)
+                cluster["title"] = generated_text.content
+                print("cluster title:", cluster["title"])
+            except Exception as e:
+                logging.warning(f"Failed to generate title for cluster {idx}: {e}")
+                cluster["title"] = "Untitled Cluster"
+
+            first_document = cleaned_search_result[0]
+            image_url = first_document.get("media_content", [{}])[0].get("url", "")
+            cluster["image"] = image_url
+
+            search_results.append(cluster)
+
+        if not search_results:
+            raise ValueError("No clusters were successfully retrieved.")
+
+        print(f"Retrieved clusters for top {m} popular articles.")
+
+        return search_results
 
 if __name__ == "__main__":
-    json_file_path = "rss_feed_entries_1.json"
+    json_file_path = "rss_feed_entries_4.json"
     collection_name = "news_feed"
 
     index_builder = IndexBuilder(
@@ -315,7 +412,14 @@ if __name__ == "__main__":
     #index_builder.remove_duplicate_points_by_title()
     # import time
     # start = time.time()
-    search_results = index_builder.retrieve_clusters_newest_articles(5, 5)
+    #articles = index_builder.find_top_m_popular_articles(10, 10, 3)
+    #print('articles:', articles)
+    clusters = index_builder.retrieve_clusters_top_m_popular_articles(10, 5, 3)
+    print(clusters)
+    # print('len clusters:', len(clusters))
+    # print('cluster 0', clusters[0]['title'])
+    #print('articles:', len(articles))
+    #search_results = index_builder.retrieve_clusters_newest_articles(5, 5)
     # end = time.time()
     # print('time:', end - start)
     # # print(search_results[0]["title"])

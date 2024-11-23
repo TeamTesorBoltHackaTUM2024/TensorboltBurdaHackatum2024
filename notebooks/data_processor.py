@@ -193,5 +193,5 @@ if __name__ == "__main__":
     parser = RSSParser(eng_feed_url_1)
     entries = parser.extract_entries_with_content()
 
-    save_entries_to_json(entries, "./rss_feed_entries_1.json")
-    save_entries_to_json(entries, "./rss_feed_entries_2.json")
+    save_entries_to_json(entries, "./rss_feed_entries_3.json")
+    save_entries_to_json(entries, "./rss_feed_entries_4.json")
