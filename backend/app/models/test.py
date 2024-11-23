@@ -12,7 +12,6 @@ class Test(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50))
     email = Column(String(100))
-    new_field = Column(String(100))
 
 # Create the table in the database
 Base.metadata.create_all(bind=engine)
