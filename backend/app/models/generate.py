@@ -49,3 +49,6 @@ class UserPreferences(BaseModel):
     facts: List[str]
 
 
+class GenerateArticleRequest(BaseModel):
+    articles_ids: List[str]
+    user_prefs: UserPreferences
