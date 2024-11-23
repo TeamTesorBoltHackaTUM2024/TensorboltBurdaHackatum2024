@@ -8,6 +8,7 @@ from llama_index.core import Settings
 import qdrant_client
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from data_processor import llm
+from datetime import datetime
 
 class IndexBuilder:
     def __init__(
@@ -150,6 +151,90 @@ class IndexBuilder:
         )
         return retrieve_engine
 
+    def find_newest_articles(self, n):
+        all_points = self.client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=None,
+        )
+
+        articles_with_timestamps = []
+
+        for point in all_points[0]:
+            payload = point.payload
+            if 'full_object' in payload and 'published_parsed' in payload['full_object']:
+                published_parsed = payload['full_object']['published_parsed']
+                if published_parsed:
+                    published_datetime = datetime(*published_parsed[:6])
+                    articles_with_timestamps.append((point, published_datetime))
+            else:
+                continue
+
+        if not articles_with_timestamps:
+            raise ValueError("No articles with 'published_parsed' found.")
+
+        articles_with_timestamps.sort(key=lambda x: x[1], reverse=True)
+
+        newest_articles = articles_with_timestamps[:n]
+
+        return newest_articles
+
+    def get_article_embedding(self, article_point):
+        payload = article_point.payload
+        if 'full_object' in payload:
+            extracted_data = payload['full_object']['extracted_data']
+            summary = extracted_data.get('summary')
+
+            if not summary:
+                raise ValueError("The article does not contain 'extracted_data.summary'.")
+
+            article_embedding = self.embed_model.get_text_embedding(summary)
+
+            return article_embedding, summary
+        return None, None
+
+    def find_nearest_documents(self, article_embedding, top_k=5):
+        search_results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=article_embedding,
+            limit=top_k
+        )
+
+        return search_results
+
+    # def find_similar_articles_to_newest(self, top_k=10):
+    #     newest_article, newest_timestamp = self.find_newest_article()
+    #     print(f"Newest article ID: {newest_article.id}, Published at: {newest_timestamp}")
+    #
+    #     article_embedding, summary = self.get_article_embedding(newest_article)
+    #     print(f"Summary of the newest article:\n{summary}\n")
+    #
+    #     search_results = self.find_nearest_documents(
+    #         article_embedding=article_embedding,
+    #         exclude_id=newest_article.id,
+    #         top_k=top_k
+    #     )
+    #
+    #     print(f"Top {top_k} articles similar to the newest article:")
+    #     for result in search_results:
+    #         payload = result.payload
+    #         score = result.score
+    #         article_id = payload.get('id')
+    #         title = payload.get('title', 'No Title')
+    #         print(f"Score: {score:.4f}, Article ID: {article_id}, Title: {title}")
+    #
+    #     return search_results
+
+    def retrieve_clusters_newest_articles(self, amount_of_newest_articles, amount_in_cluster):
+        articles = self.find_newest_articles(amount_of_newest_articles)
+        search_results = []
+        for article in articles:
+            article_embedding, summary = self.get_article_embedding(article[0])
+            search_result = self.find_nearest_documents(article_embedding, top_k=amount_in_cluster)
+            cleaned_search_result = []
+            for result in search_result:
+                cleaned_search_result.append(result.payload['full_object'])
+            search_results.append(cleaned_search_result)
+        return search_results
 
 if __name__ == "__main__":
     json_file_path = "rss_feed_entries_1.json"
@@ -159,16 +244,27 @@ if __name__ == "__main__":
         json_file_path=json_file_path,
         collection_name=collection_name,
     )
-
-    data = index_builder.load_data()
-    index_builder.process_documents(data)
-
-    index_builder.build_storage_context()
-    index_builder.build_index()
-
-    retriever = index_builder.get_retriever_engine(llm=llm, similarity_top_k=20)
-
-    # %%
-    query = "The new BMW F 900 R and F 900 XR have received significant technical and visual upgrades"
-    response = retriever.retrieve(query)
-    print(response)
+    search_result = index_builder.retrieve_clusters_newest_articles(2, 5)
+    print('search_result:', search_result)
+    # articles = index_builder.find_newest_articles(5)
+    # print('newest_article:', articles[0][0])
+    # print('newest_timestamp:', articles[0][1])
+    # print('second_newest_article:', articles[1][0])
+    # print('second_newest_timestamp:', articles[1][1])
+    # article_embedding, summary = index_builder.get_article_embedding(articles[0][0])
+    # print('article_embedding:', len(article_embedding))
+    # print('summary:', summary)
+    # print('type of article:', type(article_embedding))
+    # search_results = index_builder.find_nearest_documents(article_embedding, top_k=5)
+    # print('search_results:', len(search_results))
+    # data = index_builder.load_data()
+    # index_builder.process_documents(data)
+    #
+    # index_builder.build_storage_context()
+    # index_builder.build_index()
+    #
+    # retriever = index_builder.get_retriever_engine(llm=llm, similarity_top_k=100)
+    #
+    # query = "The new BMW F 900 R and F 900 XR have received significant technical and visual upgrades"
+    # response = retriever.retrieve(query)
+    # print(len(response))
