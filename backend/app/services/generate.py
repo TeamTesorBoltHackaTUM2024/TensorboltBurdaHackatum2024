@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from llama_index.core import (
     VectorStoreIndex,
@@ -14,9 +14,15 @@ from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import FunctionTool
-from llama_index.core.llms import ChatMessage
 from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 from llama_index.llms.azure_openai import AzureOpenAI
+
+
+import json
+from llama_index.core.llms import ChatMessage, MessageRole, ChatResponse
+from llama_index.core.llms.structured_llm import StructuredLLM
+from app.models.generate import News, NewsData, UserPreferences, GenArticle, Tone, Style, TargetAudience, ArticleLength
+
 
 # Import settings
 from app.settings import settings
@@ -46,96 +52,128 @@ else:
         api_key=settings.AZURE_OPENAI_API_KEY
     )
 
-# Function to generate ideas from a prompt
-def generate_ideas(prompt: str) -> List[str]:
-    """
-    Generate a list of ideas based on the input prompt.
+class SystemPromptBuilder:
+    tone: Optional[Tone] = None
+    style: Optional[Style] = None
+    target_audiance: Optional[TargetAudience] = None
+    article_length: Optional[ArticleLength] = None
 
-    Args:
-        prompt (str): The prompt to generate ideas from.
+    _system_prompt = (
+        "You are an expert writer specializing in creating engaging and informative articles. "
+        "Your task is to generate a well-structured and high-quality article. "
+        "Keep the content accurate, creative, and concise. "
+        "If specific preferences such as tone, style, target audience, or length are provided, tailor the article accordingly. "
+        "If no preferences are given, use a neutral tone, a balanced style, and write for a general audience with a moderate length."
+    )
 
-    Returns:
-        list: A list of generated ideas.
+    def with_tone(self, tone: Tone | None):
+        self.tone = tone
+        return self
+
+    def with_style(self, style: Style | None):
+        self.style = style
+        return self
+
+    def with_target_audiance(self, target_audiance: TargetAudience | None):
+        self.target_audiance = target_audiance
+        return self
+
+    def with_article_length(self, article_length: ArticleLength | None):
+        self.article_length = article_length
+        return self
+
+    def build(self) -> str:
+        prompt = self._system_prompt
+
+        match self.tone:
+            case Tone.opinionated:
+                prompt += " Provide a strong perspective on the topic, including your opinions and supporting arguments."
+            case Tone.neutral:
+                prompt += " Maintain an objective and balanced tone, presenting facts without personal bias."
+
+        match self.style:
+            case Style.casual:
+                prompt += " Use a friendly and conversational style, making the content approachable and easy to read."
+            case Style.formal:
+                prompt += " Use a professional and formal style, maintaining a polished and sophisticated tone."
+
+        match self.target_audiance:
+            case TargetAudience.beginners:
+                prompt += " Write for readers who are new to the topic, explaining concepts in simple terms and avoiding jargon."
+            case TargetAudience.experts:
+                prompt += " Write for readers with expertise in the topic, using technical language and in-depth analysis."
+            case TargetAudience.hobbyist:
+                prompt += " Write for hobbyist who enjoy reading electrical cars."
+
+        match self.article_length:
+            case ArticleLength.short:
+                prompt += " Keep the article concise, aiming for approximately 500 words."
+            case ArticleLength.medium:
+                prompt += " Aim for a balanced length, approximately 1000 words, providing enough detail without overwhelming the reader."
+            case ArticleLength.long:
+                prompt += " Write a comprehensive article with approximately 2000 words, covering the topic in-depth with detailed explanations."
+
+        return prompt
+
+
+def read_news_json_file(file_path: str) -> List[News]:
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    news_list: List[News] = []
+    for item in data:
+        title = item['title']
+        content = item['title']
+        authors = [ author['name'] for author in item['authors']]
+        published = item['published']
+
+        ext_data = item['extracted_data']
+        summary: str = ext_data['summary']
+        keywords: List[str] = ext_data['keywords']
+        facts: List[str] = ext_data['facts']
+        important_dates: Dict[str,str] = ext_data['important_dates']
+
+        news_data = NewsData(summary=summary, keywords=keywords, facts=facts, important_dates=important_dates)
+
+        news_item = News(title=title, content=content, authors=authors, published=published, extracted_data=news_data)
+        news_list.append(news_item)
+
+    return news_list
+
+
+def prepare_input(news_list: List[News]) -> str:
     """
-    try:
-        article_ideas = [
-            "The Evolution of MS Dhoni: From Ranchi Boy to Cricket Legend",
-            "Captain Cool's Iconic Leadership Moments in Indian Cricket",
-            "MS Dhoni's Best Finishes: A Masterclass in Chasing Targets",
-            "The Helicopter Shot: How MS Dhoni Revolutionized Modern Batting",
-            "A Tale of Calmness: Lessons in Composure from MS Dhoni",
-            "MS Dhoni’s Role in Shaping the IPL and Chennai Super Kings' Legacy",
-            "Behind the Stumps: Dhoni’s Genius as a Wicket-Keeper",
-            "MS Dhoni’s Contributions to Indian Cricket Beyond the Field",
-            "The Untold Stories: Anecdotes That Define Dhoni's Personality"
+    prepare newline separated input to the model
+    """
+    # this is too bulk, we use the extracted data instead
+    # input = [ news.title + '\n' + news.content for news in news_list ]
+
+    input = [ "\n".join([news.title, news.extracted_data.summary, str(news.extracted_data.keywords), str(news.extracted_data.facts), "\n".join([ date + ': ' + event for date, event in news.extracted_data.important_dates.items() ]) ]) for news in news_list ]
+    return "\n\n".join(input)
+
+
+def generate_article(llm: AzureOpenAI, prefs: UserPreferences, news_list: List[News]) -> GenArticle:
+    system_prompt = SystemPromptBuilder() \
+        .with_tone(prefs.tone) \
+        .with_style(prefs.style) \
+        .with_target_audiance(prefs.target_audiance) \
+        .with_article_length(prefs.article_length) \
+        .build()
+
+    model_input = prepare_input(news_list)
+    user_prompt = f"Write an article based on the following news:\n\n{model_input}"
+
+    sllm: StructuredLLM = llm.as_structured_llm(output_cls=GenArticle)
+    response: ChatResponse = sllm.chat(
+        [
+            ChatMessage(role=MessageRole.SYSTEM, content=system_prompt),
+            ChatMessage(role=MessageRole.USER, content=user_prompt)
         ]
+    )
 
-        return article_ideas
+    content = response.message.content
+    if content is None:
+        raise ValueError('Model output is invalid: does not contain content')
 
-    except Exception as e:
-        print(f"Error generating ideas: {e}")
-        return []
+    return GenArticle.model_validate_json(content)
 
-# Function to filter and rank ideas
-def filter_and_rank_ideas(ideas: list) -> list:
-    """
-    Filter and rank ideas based on their length (example ranking method).
-
-    Args:
-        ideas (list): A list of ideas to rank.
-
-    Returns:
-        list: Top 5 ranked ideas.
-    """
-    try:
-        ranked_ideas = sorted(ideas, key=lambda idea: len(idea))  # Rank by length as an example
-        return ranked_ideas[:5]  # Return top 5 ideas
-    except Exception as e:
-        print(f"Error filtering and ranking ideas: {e}")
-        return []
-
-# Function to synthesize an article from ideas
-def synthesize_article(title: str, ideas: List[str]) -> str:
-    """
-    Synthesize a detailed article using a title and ideas.
-
-    Args:
-        title (str): The title of the article.
-        ideas (list): A list of ideas to use in the article.
-
-    Returns:
-        str: The synthesized article.
-    """
-    try:
-        content = "\n".join(ideas)
-        response = Settings.llm.chat(
-            [ChatMessage(role="user", content=f"Write a detailed article with the title '{title}' using the following ideas: {content}")]
-        )
-        return response
-    except Exception as e:
-        print(f"Error synthesizing article: {e}")
-        return ""
-
-# Wrap the functions as tools
-generate_ideas_tool = FunctionTool.from_defaults(fn=generate_ideas)
-filter_and_rank_tool = FunctionTool.from_defaults(fn=filter_and_rank_ideas)
-synthesize_article_tool = FunctionTool.from_defaults(fn=synthesize_article)
-
-# Define the system prompt for the agent
-system_prompt = """
-You are an intelligent assistant capable of generating ideas, filtering them, synthesizing articles, and analyzing misinformation.
-Use the available tools to complete each task step by step. Provide clear, concise, and well-structured outputs.
-"""
-
-# Create the ReActAgent with tools and the defined system prompt
-article_generation_react_agent = ReActAgent.from_tools(
-    tools=[
-        generate_ideas_tool,
-        filter_and_rank_tool,
-        synthesize_article_tool,
-
-    ],
-    verbose=True,
-    system_prompt=system_prompt,
-    max_iterations=20
-)
