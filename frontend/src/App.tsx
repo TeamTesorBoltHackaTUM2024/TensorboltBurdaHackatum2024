@@ -1,25 +1,19 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./components/Home";
-import Test from "./components/Test";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HomePage } from "./pages/HomePage";
+import { ArticlePage } from "./pages/ArticlePage";
+import { AIGeneratorPage } from "./pages/AIGeneratorPage";
+import { RootLayout } from "./layouts/RootLayout";
 
-function App() {
+export function App() {
   return (
-    <BrowserRouter>
-      {/* Main layout wrapper */}
-      <div className="flex flex-col">
-        {/* Main content wrapper */}
-        <div className="flex flex-grow">
-          {/* Main content */}
-          <div>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/test" element={<Test />} />
-            </Routes>
-          </div>
-        </div>
-      </div>
-    </BrowserRouter>
+    <Router>
+      <Routes>
+        <Route path="/" element={<RootLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="article/:id" element={<ArticlePage />} />
+          <Route path="ai-generator" element={<AIGeneratorPage />} />
+        </Route>
+      </Routes>
+    </Router>
   );
 }
-
-export default App;
