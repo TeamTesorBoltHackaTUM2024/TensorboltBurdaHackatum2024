@@ -9,6 +9,9 @@ import qdrant_client
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from data_processor import llm
 from datetime import datetime
+from text_generator import TextGenerator
+
+
 
 class IndexBuilder:
     def __init__(
@@ -231,9 +234,28 @@ class IndexBuilder:
             article_embedding, summary = self.get_article_embedding(article[0])
             search_result = self.find_nearest_documents(article_embedding, top_k=amount_in_cluster)
             cleaned_search_result = []
+            cluster = {}
             for result in search_result:
                 cleaned_search_result.append(result.payload['full_object'])
-            search_results.append(cleaned_search_result)
+            cluster["cluster"] = cleaned_search_result
+            titles = [element['title'] for element in cleaned_search_result]
+
+            titles_list = "\n".join(f"- {title}" for title in titles)
+
+            text_generator = TextGenerator(llm)
+
+            input_data = TextGenerator.InputModel(
+                system_prompt=(
+                    "You are a creative assistant. Below is a list of titles grouped into a cluster:\n\n"
+                    f"{titles_list}\n\n"
+                    "Your task is to come up with a single, cohesive title that represents the entire cluster of titles."
+                ),
+                user_prompt="What is the most appropriate title for the cluster as a whole? Provide only the title."
+            )
+            generated_text = text_generator.generate_text(input_data)
+            cluster["title"] = generated_text.content
+            cluster["image"] = cleaned_search_result[0]["media_content"][0]["url"]
+            search_results.append(cluster)
         return search_results
 
 if __name__ == "__main__":
@@ -244,8 +266,16 @@ if __name__ == "__main__":
         json_file_path=json_file_path,
         collection_name=collection_name,
     )
-    search_result = index_builder.retrieve_clusters_newest_articles(2, 5)
-    print('search_result:', search_result)
+    import time
+    start = time.time()
+    search_results = index_builder.retrieve_clusters_newest_articles(5, 5)
+    end = time.time()
+    print('time:', end - start)
+    # print(search_results[0]["title"])
+    # print(search_results[0]["image"])
+    print(search_results[0]["cluster"])
+    print(search_results[0]["title"])
+    print(search_results[0]["image"])
     # articles = index_builder.find_newest_articles(5)
     # print('newest_article:', articles[0][0])
     # print('newest_timestamp:', articles[0][1])
