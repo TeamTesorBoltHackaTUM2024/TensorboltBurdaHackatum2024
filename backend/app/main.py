@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 import os
 
-from app.routers import generate, test, ingress
+from app.routers import generate, test
 from app.settings import settings
 
 # App definition
@@ -31,4 +31,3 @@ def root():
 # Routers
 app.include_router(generate.router)
 app.include_router(test.router)
-app.include_router(ingress.router)
