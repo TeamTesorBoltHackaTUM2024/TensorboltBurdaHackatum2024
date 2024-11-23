@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.models.generate import UserPreferences, GenArticle
+from app.models.generate import GenArticle, GenerateArticleRequest
 from app.services.generate import read_news_json_file, generate_article
 from llama_index.llms.azure_openai import AzureOpenAI
 from app.settings import settings
@@ -23,6 +24,7 @@ router = APIRouter(
 )
 
 @router.post("/article")
-def generate(user_prefs: UserPreferences) -> GenArticle:
-    news_list = read_news_json_file("./rss_feed_entries_1.json")
-    return generate_article(llm, user_prefs, news_list)
+def generate(generate_req: GenerateArticleRequest) -> GenArticle:
+    news_list = read_news_json_file("./rss_feed_entries_2.json")
+    return generate_article(llm, generate_req.user_prefs, news_list)
+    

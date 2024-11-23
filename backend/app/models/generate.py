@@ -45,4 +45,10 @@ class UserPreferences(BaseModel):
     style: Optional[Style]
     target_audiance: Optional[TargetAudience]
     article_length: Optional[ArticleLength]
+    keywords: List[str]
+    facts: List[str]
 
+
+class GenerateArticleRequest(BaseModel):
+    articles_ids: List[str]
+    user_prefs: UserPreferences

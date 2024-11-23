@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 from pydantic import BaseModel
 from llama_index.core import (
     VectorStoreIndex,
@@ -57,6 +57,8 @@ class SystemPromptBuilder:
     style: Optional[Style] = None
     target_audiance: Optional[TargetAudience] = None
     article_length: Optional[ArticleLength] = None
+    keywords: List[str] = []
+    facts: List[str] = []
 
     _system_prompt = (
         "You are an expert writer specializing in creating engaging and informative articles. "
@@ -80,6 +82,14 @@ class SystemPromptBuilder:
 
     def with_article_length(self, article_length: ArticleLength | None):
         self.article_length = article_length
+        return self
+
+    def with_keywords(self, keywords: List[str]):
+        self.keywords = keywords
+        return self
+
+    def with_facts(self, facts: List[str]):
+        self.facts = facts
         return self
 
     def build(self) -> str:
@@ -112,6 +122,12 @@ class SystemPromptBuilder:
                 prompt += " Aim for a balanced length, approximately 1000 words, providing enough detail without overwhelming the reader."
             case ArticleLength.long:
                 prompt += " Write a comprehensive article with approximately 2000 words, covering the topic in-depth with detailed explanations."
+
+        if len(self.keywords) > 0:
+            prompt += f" Keywords for the article: {self.keywords}."
+
+        if len(self.facts) > 0:
+            prompt += f" The article should focus on the following: {self.facts}."
 
         return prompt
 
@@ -158,6 +174,8 @@ def generate_article(llm: AzureOpenAI, prefs: UserPreferences, news_list: List[N
         .with_style(prefs.style) \
         .with_target_audiance(prefs.target_audiance) \
         .with_article_length(prefs.article_length) \
+        .with_keywords(prefs.keywords) \
+        .with_facts(prefs.facts) \
         .build()
 
     model_input = prepare_input(news_list)
