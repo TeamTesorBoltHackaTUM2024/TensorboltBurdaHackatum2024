@@ -24,5 +24,5 @@ router = APIRouter(
 
 @router.post("/article")
 def generate(user_prefs: UserPreferences) -> GenArticle:
-    news_list = read_news_json_file("./rss_feed_entries_1.json")
+    news_list = read_news_json_file("./rss_feed_entries_2.json")
     return generate_article(llm, user_prefs, news_list)

@@ -45,4 +45,7 @@ class UserPreferences(BaseModel):
     style: Optional[Style]
     target_audiance: Optional[TargetAudience]
     article_length: Optional[ArticleLength]
+    keywords: List[str]
+    facts: List[str]
+
 
