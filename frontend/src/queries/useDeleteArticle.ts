@@ -8,7 +8,7 @@ const useDeleteArticle = (id: number) => {
   return useMutation({
     mutationFn: () => deleteArticle(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(["articles"]);
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
     },
   });
 };

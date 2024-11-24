@@ -27,8 +27,8 @@ export function CreateArticlePage() {
         onChange={setValue}
         className="mb-6 w-full max-w-3xl"
       />
-      <Button onClick={handleSubmit} disabled={mutation.isLoading}>
-        {mutation.isLoading ? "Saving..." : "Save"}
+      <Button onClick={handleSubmit} disabled={mutation.isPending}>
+        {mutation.isPending ? "Saving..." : "Save"}
       </Button>
     </div>
   );

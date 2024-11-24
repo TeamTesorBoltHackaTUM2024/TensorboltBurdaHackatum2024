@@ -51,7 +51,11 @@ export default function GenAIZone() {
       const data = await response.json();
       setResult(type === "thumbnail" ? data.image_url : data.video_url);
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }

@@ -31,11 +31,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 export function ArticlePage() {
   const { id } = useParams();
-  const { data: article, isLoading } = useArticle(Number(id));
+  const { data: article, isPending } = useArticle(Number(id));
   const mutation = useDeleteArticle(Number(id));
   const navigate = useNavigate();
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="flex justify-center items-center h-screen">
         Loading...
@@ -54,16 +54,16 @@ export function ArticlePage() {
   return (
     <div className="p-6 flex flex-col items-center">
       <h1 className="text-2xl font-bold mb-6">
-        {article.content?.title || "Untitled"}
+        {article?.content?.title || "Untitled"}
       </h1>
       <div className="flex gap-4">
         <Button onClick={() => navigate(`/article/edit/${id}`)}>Edit</Button>
         <Button
           variant="destructive"
           onClick={handleDelete}
-          disabled={mutation.isLoading}
+          disabled={mutation.isPending}
         >
-          {mutation.isLoading ? "Deleting..." : "Delete"}
+          {mutation.isPending ? "Deleting..." : "Delete"}
         </Button>
       </div>
     </div>
