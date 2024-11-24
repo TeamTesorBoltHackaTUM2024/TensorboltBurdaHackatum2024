@@ -11,6 +11,7 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from data_processor import llm
 from datetime import datetime
 from text_generator import TextGenerator
+
 import numpy as np
 
 from settings import settings
@@ -123,6 +124,7 @@ class IndexBuilder:
             llm=llm, similarity_top_k=similarity_top_k
         )
         return retrieve_engine
+
 
     def find_electric_cars_articles(self, n):
         # Get the embedding for the query "Electric car"
@@ -377,6 +379,7 @@ def add_to_database(json_file_path):
         json_file_path=json_file_path,
         collection_name=collection_name,
     )
+
     data = index_builder.load_data()
     index_builder.process_documents(data)
 
@@ -406,4 +409,39 @@ if __name__ == "__main__":
     clusters = index_builder.retrieve_clusters_top_m_popular_articles(10, 5, 3)
     print(clusters)
 
+
+
+    #index_builder.remove_duplicate_points_by_title()
+    # import time
+    # start = time.time()
+    search_results = index_builder.retrieve_clusters_newest_articles(5, 5)
+    # end = time.time()
+    # print('time:', end - start)
+    # # print(search_results[0]["title"])
+    # # print(search_results[0]["image"])
+    # print(search_results[0]["cluster"])
+    # print(search_results[0]["title"])
+    # print(search_results[0]["image"])
+    # articles = index_builder.find_newest_articles(5)
+    # print('newest_article:', articles[0][0])
+    # print('newest_timestamp:', articles[0][1])
+    # print('second_newest_article:', articles[1][0])
+    # print('second_newest_timestamp:', articles[1][1])
+    # article_embedding, summary = index_builder.get_article_embedding(articles[0][0])
+    # print('article_embedding:', len(article_embedding))
+    # print('summary:', summary)
+    # print('type of article:', type(article_embedding))
+    # search_results = index_builder.find_nearest_documents(article_embedding, top_k=5)
+    # print('search_results:', len(search_results))
+    # data = index_builder.load_data()
+    # index_builder.process_documents(data)
+    #
+    # index_builder.build_storage_context()
+    # index_builder.build_index()
+    #
+    # retriever = index_builder.get_retriever_engine(llm=llm, similarity_top_k=100)
+    #
+    # query = "The new BMW F 900 R and F 900 XR have received significant technical and visual upgrades"
+    # response = retriever.retrieve(query)
+    # print(len(response))
 
