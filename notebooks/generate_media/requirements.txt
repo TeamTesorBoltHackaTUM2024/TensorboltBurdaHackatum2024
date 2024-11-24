@@ -1,0 +1,8 @@
+flask
+google-cloud-storage
+pillow
+moviepy=1.0.3
+numpy
+requests
+python-dotenv
+azure-openai
