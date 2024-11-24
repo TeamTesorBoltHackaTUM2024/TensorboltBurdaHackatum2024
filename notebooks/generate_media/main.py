@@ -5,17 +5,19 @@ import time
 from flask import Flask, request, jsonify
 from google.cloud import storage
 from PIL import Image
-from moviepy.editor import ImageClip, concatenate_videoclips
+from moviepy.editor import ImageClip, concatenate_videoclips, CompositeVideoClip, TextClip
 import numpy as np
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 import requests
+import uuid
 
 # Load environment variables
 load_dotenv()
 openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
 openai_api_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 openai_api_dalle_endpoint = os.getenv("AZURE_OPENAI_DALLE_ENDPOINT")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 
 # Initialize OpenAI clients
 dalle_client = AzureOpenAI(
@@ -31,7 +33,6 @@ gpt_client = AzureOpenAI(
 )
 
 # Google Cloud Storage setup
-GCS_BUCKET_NAME = "image-video-store"
 storage_client = storage.Client()
 bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
@@ -72,19 +73,23 @@ def generate_image_prompts(num_images, titles):
 def create_video_from_images(images, vid_length, output_path):
     duration = vid_length / len(images)
     clips = [ImageClip(np.array(img)).set_duration(duration) for img in images]
+
     video = concatenate_videoclips(clips, method="compose")
     video.write_videofile(output_path, fps=1, codec="libx264")
 
 @app.route("/generate-image", methods=["POST"])
 def generate_image():
     try:
+        generated_uuid = uuid.uuid4()
         data = request.json
         titles = data["titles"]
+        size = data.get("size", "1024x1792")
         prompt = generate_image_prompts(1, titles)[0]
-        image = generate_image_from_text_dalle(prompt)
+        print(prompt)
+        image = generate_image_from_text_dalle(prompt, size)
         output_path = "/tmp/generated_image.png"
         image.save(output_path)
-        gcs_url = upload_to_gcs(output_path, "generated_image.png")
+        gcs_url = upload_to_gcs(output_path, f"generated_image-{generated_uuid}.png")
         return jsonify({"image_url": gcs_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -92,17 +97,20 @@ def generate_image():
 @app.route("/generate-video", methods=["POST"])
 def generate_video():
     try:
+        generated_uuid = uuid.uuid4()
         data = request.json
         titles = data["titles"]
         num_images = int(data.get("num_images", 4))
         vid_length = int(data.get("vid_length", 16))
 
         prompts = generate_image_prompts(num_images, titles)
+        for prompt in prompts:
+            print(prompt)
         images = [generate_image_from_text_dalle(prompt) for prompt in prompts]
 
         output_path = "/tmp/generated_video.mp4"
         create_video_from_images(images, vid_length, output_path)
-        gcs_url = upload_to_gcs(output_path, "generated_video.mp4")
+        gcs_url = upload_to_gcs(output_path, f"generated_video-{generated_uuid}.mp4")
         return jsonify({"video_url": gcs_url}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

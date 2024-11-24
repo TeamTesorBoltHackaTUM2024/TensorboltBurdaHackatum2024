@@ -1,8 +1,8 @@
 flask
 google-cloud-storage
 pillow
-moviepy=1.0.3
-numpy
+moviepy==1.0.3
 requests
 python-dotenv
-azure-openai
+numpy==2.1.3
+openai==1.55.0

@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # Set the working directory
 WORKDIR /app
@@ -7,8 +7,10 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt .
 
-# Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install FFmpeg and Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 # Copy the rest of the application code
 COPY . .
