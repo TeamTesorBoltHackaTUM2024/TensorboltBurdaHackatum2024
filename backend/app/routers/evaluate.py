@@ -1,126 +1,68 @@
-from datetime import datetime, timezone
-from typing import Dict
-from fastapi import APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from llama_index.program.openai import OpenAIPydanticProgram
+from typing import Dict, List
+import json
 from llama_index.llms.azure_openai import AzureOpenAI
 from app.settings import settings
 
-class ScoreWithExplanation(BaseModel):
-    """
-    Represents a score (1-10) and its explanation.
-    """
-    score: int = Field(ge=1, le=10, description="Score ranging from 1 to 10.")
-    explanation: str = Field(..., description="Explanation of the score.")
-
-
-class EvaluationResult(BaseModel):
-    """
-    Schema for evaluating content using LLM.
-    Ensures all fields are populated with default values if missing.
-    """
-    content_quality: Dict[str, ScoreWithExplanation] = Field(
-        default_factory=dict, description="Evaluation of content quality aspects."
-    )
-    expertise: Dict[str, ScoreWithExplanation] = Field(
-        default_factory=dict, description="Evaluation of expertise-related aspects."
-    )
-    page_experience: Dict[str, ScoreWithExplanation] = Field(
-        default_factory=dict, description="Evaluation of page experience aspects."
-    )
-    people_first: Dict[str, ScoreWithExplanation] = Field(
-        default_factory=dict, description="Evaluation of people-first aspects."
-    )
-
-
-# FastAPI Router
 router = APIRouter(
     prefix="/evaluate",
-    tags=["Evaluate Article According to SEO"],
+    tags=["Generate Article"],
     responses={404: {"description": "Not found"}},
 )
 
-
-# LLM Initialization
+# Azure OpenAI LLM Initialization
 llm = AzureOpenAI(
     engine=settings.AZURE_OPENAI_ENGINE,
     model=settings.AZURE_OPENAI_MODEL,
     api_key=settings.AZURE_OPENAI_API_KEY,
     azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
     api_version=settings.AZURE_OPENAI_API_VERSION,
-    temperature=0.2,
 )
 
+class TextInput(BaseModel):
+    text: str
 
-prompt_template_str = """\
-Evaluate the given content against these categories: 
-- Content Quality: Originality, Completeness, Insightfulness, Value Addition.
-- Expertise: Evidence of Expertise, Factual Accuracy, Author Information.
-- Page Experience: Readability, Loading Speed, Mobile Friendly.
-- People First: Audience Targeting, Depth of Knowledge, Satisfaction.
+class ScoreExplanation(BaseModel):
+    score: float = Field(..., description="The score value for the evaluation metric.")
+    explanation: str = Field(..., description="A detailed explanation of the score.")
 
-Provide a structured JSON output with scores (1-10) and explanations for each aspect.
-Ensure all categories are present, even if a category's score is minimal.
+class EvaluationResponse(BaseModel):
+    scores: Dict[str, ScoreExplanation]
 
-Output Format:
-{
-    "content_quality": {
-        "Originality": {"score": 8, "explanation": "Explanation text"},
-        ...
-    },
-    "expertise": {
-        ...
-    },
-    "page_experience": {
-        ...
-    },
-    "people_first": {
-        ...
-    }
-}
-
-Content: {content}
-"""
-
-
-# OpenAIPydanticProgram Setup
-evaluation_program = OpenAIPydanticProgram.from_defaults(
-    output_cls=EvaluationResult,
-    llm=llm,
-    prompt_template_str=prompt_template_str,
-    verbose=True,
-)
-
-
-@router.post("/evaluate", response_model=EvaluationResult)
-async def evaluate_content(content: str) -> EvaluationResult:
-    """
-    Evaluate content using AzureOpenAI and return structured evaluation schema.
-
-    Args:
-        content (str): The content to be evaluated.
-
-    Returns:
-        EvaluationResult: Structured evaluation of the content.
-    """
+@router.post("/", response_model=EvaluationResponse)
+async def evaluate_text(input: TextInput):
     try:
-        # Run the evaluation program
-        raw_result = evaluation_program(content=content)
+        # Call the LLM to get scores for readability, SEO, engagement, originality, and coherence
+        response = llm.invoke(f"Evaluate the following text: {input.text}")
+        
+        # Assuming the response is a JSON with scores and explanations for each category
+        scores_data = json.loads(response)
+        
+        scores = {
+            "readability": ScoreExplanation(
+                score=scores_data.get("readability", 0),
+                explanation=scores_data.get("readability_explanation", "No explanation available.")
+            ),
+            "seo": ScoreExplanation(
+                score=scores_data.get("seo", 0),
+                explanation=scores_data.get("seo_explanation", "No explanation available.")
+            ),
+            "engagement": ScoreExplanation(
+                score=scores_data.get("engagement", 0),
+                explanation=scores_data.get("engagement_explanation", "No explanation available.")
+            ),
+            "originality": ScoreExplanation(
+                score=scores_data.get("originality", 0),
+                explanation=scores_data.get("originality_explanation", "No explanation available.")
+            ),
+            "coherence": ScoreExplanation(
+                score=scores_data.get("coherence", 0),
+                explanation=scores_data.get("coherence_explanation", "No explanation available.")
+            )
+        }
 
-        # Preprocess and validate LLM output
-        result_dict = raw_result.dict()
-
-        # Validate the output schema
-        validated_result = EvaluationResult.parse_obj(result_dict)
-
-        return validated_result
-
+        return EvaluationResponse(scores=scores)
+    
     except Exception as e:
-        # Log the error for debugging purposes
-        import logging
-        logging.error(f"Error during evaluation: {str(e)}")
-
-        # Return a user-friendly error message
-        raise HTTPException(
-            status_code=500, detail=f"Error during evaluation: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))

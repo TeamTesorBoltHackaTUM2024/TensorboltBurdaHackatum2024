@@ -13,6 +13,7 @@ from datetime import datetime
 from text_generator import TextGenerator
 import numpy as np
 
+from settings import settings
 
 class IndexBuilder:
     def __init__(
@@ -23,11 +24,11 @@ class IndexBuilder:
         api_version="2024-08-01-preview",
     ):
         load_dotenv()
-        self.API_KEY = os.environ["AZURE_OPENAI_API_KEY"]
-        self.AZURE_ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"]
-        self.QDRANT_HOST = os.environ["QDRANT_HOST"]
-        self.QDRANT_PORT = os.environ["QDRANT_PORT"]
-        self.QDRANT_API_KEY = os.environ["QDRANT_API_KEY"]
+        self.API_KEY = settings.AZURE_OPENAI_API_KEY
+        self.AZURE_ENDPOINT = settings.AZURE_OPENAI_ENDPOINT
+        self.QDRANT_HOST = settings.QDRANT_HOST
+        self.QDRANT_PORT = settings.QDRANT_PORT
+        self.QDRANT_API_KEY = settings.QDRANT_PORT
 
         self.json_file_path = json_file_path
         self.collection_name = collection_name
