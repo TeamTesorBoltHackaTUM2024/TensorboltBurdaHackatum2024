@@ -16,9 +16,9 @@ interface Props {
 }
 
 export default function ArticleGenerator({ onGenerate }: Props) {
-  const [topic, setTopic] = useState("");
-  const [keywords, setKeywords] = useState("");
-  const [facts, setFacts] = useState("");
+  const [topic, setTopic] = useState("EV");
+  const [keywords, setKeywords] = useState("german,market,electric,green");
+  const [facts, setFacts] = useState("adoption");
   const [tone, setTone] = useState("opinionated");
   const [style, setStyle] = useState("casual");
   const [targetAudience, setTargetAudience] = useState("beginners");
@@ -27,7 +27,8 @@ export default function ArticleGenerator({ onGenerate }: Props) {
   const handleGenerate = async () => {
     try {
       const response = await axios.post(
-        "http://localhost:8000/generate/article",
+        import.meta.env.VITE_BACKEND_ARTICLE_ENDPOINT,
+
         {
           articles_ids: ["string"], // You might want to update this based on your needs
           user_prefs: {

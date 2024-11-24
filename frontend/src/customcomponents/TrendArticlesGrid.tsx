@@ -981,12 +981,27 @@ export function TrendArticlesGrid() {
           },
         },
       ];
-      //
 
       setExistingArticles(mockExistingArticles);
       setLoading(false);
     }, 1000); // Simulating network delay
   }, []);
+
+  // useEffect(() => {
+  //   const fetchArticles = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const response = await apiClient.get("/cluster/");
+  //       setExistingArticles(response.data.data);
+  //     } catch (error) {
+  //       console.error("Error fetching articles:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchArticles();
+  // }, []);
 
   if (loading) {
     return (
@@ -1023,24 +1038,7 @@ export function TrendArticlesGrid() {
                 className="absolute inset-0 object-cover w-full h-full"
               />
             </div>
-            {/* <CardHeader>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">
-                  {existingArticle.}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {formatDate(existingArticle.date)}
-                </span>
-              </div>
-              <CardTitle className="line-clamp-2">
-                {existingArticle.title}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground line-clamp-3">
-                {existingArticle.description}
-              </p>
-            </CardContent> */}
+            <h2 className="p-4">{existingArticle.title}</h2>
           </Card>
         </Link>
       ))}

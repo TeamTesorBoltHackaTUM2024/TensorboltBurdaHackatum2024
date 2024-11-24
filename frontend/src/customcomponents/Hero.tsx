@@ -26,12 +26,12 @@ export function Hero() {
     setLoading(true);
     setTimeout(() => {
       const mockHeroData: HeroData = {
-        title: "Trending Topics",
-        description: "Here is a brief description of the hero section.",
+        title: "Tensorbolt",
+        description: "Electric cars Drive the Future, We Drive the News!",
         image: "https://picsum.photos/1800/900",
         primaryCta: {
-          text: "Get Started",
-          href: "/get-started",
+          text: "Go to Generation studio",
+          href: "/dashboard",
         },
         secondaryCta: {
           text: "Learn More",
@@ -88,16 +88,6 @@ export function Hero() {
               >
                 <a href={heroData.primaryCta.href}>
                   {heroData.primaryCta.text}
-                </a>
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white/10"
-              >
-                <a href={heroData.secondaryCta.href}>
-                  {heroData.secondaryCta.text}
                 </a>
               </Button>
             </div>

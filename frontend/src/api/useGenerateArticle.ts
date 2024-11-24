@@ -24,7 +24,7 @@ export const generateArticle = async (
   data: GenerateArticleRequest
 ): Promise<GenerateArticleResponse> => {
   const response = await axios.post(
-    "http://localhost:8000/generate/article",
+    import.meta.env.VITE_BACKEND_ARTICLE_ENDPOINT,
     data,
     {
       headers: {
