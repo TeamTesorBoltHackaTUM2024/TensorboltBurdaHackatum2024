@@ -17,6 +17,9 @@ export default function EditorPage() {
   const [sources, setSources] = useState([]);
   const [isSaved, setIsSaved] = useState(true);
 
+  console.log(headers)
+  console.log(setSources)
+
   const handleSave = () => {
     // Implement save logic here
     setIsSaved(true);
