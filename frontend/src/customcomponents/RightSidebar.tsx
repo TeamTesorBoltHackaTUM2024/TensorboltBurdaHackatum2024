@@ -1,72 +1,85 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PhoneCall, Mail } from "lucide-react";
 
-export function MediaLibrary() {
+export function KeyFeatures() {
   return (
     <Card className="bg-cyan-100 mb-4">
       <CardHeader>
-        <CardTitle className="text-black font-bold">Media Library</CardTitle>
+        <CardTitle className="text-black font-bold">🌟 Key Features</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-black">Access our comprehensive media resources.</p>
-        <Button className="mt-4 bg-black text-white hover:bg-black/90">
-          Explore Library
-        </Button>
+      <CardContent className="text-black space-y-2">
+        <p>
+          🔍 <b>Automated News Parsing</b>: Continuously extracts EV-related
+          content.
+        </p>
+        <p>
+          🤖 <b>LLM-Powered Analysis</b>: Summarizes articles and extracts
+          metadata.
+        </p>
+        <p>
+          🔥 <b>Trending Topics Detection</b>: Finds the hottest news in the EV
+          sector.
+        </p>
+        <p>
+          🎨 <b>Media Enrichment</b>: Creates visuals and videos for engaging
+          content.
+        </p>
+        <p>
+          🔧 <b>Customizable Content</b>: Tailors articles to user preferences.
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-export function ContactPerson() {
+export function ProblemSolved() {
   return (
     <Card className="bg-yellow-100 mb-4">
       <CardHeader>
-        <CardTitle className="text-black font-bold">Contact Person</CardTitle>
+        <CardTitle className="text-black font-bold">
+          💡 Problem Solved
+        </CardTitle>
       </CardHeader>
-      <CardContent className="text-black">
-        <p className="mb-2">Jane Doe</p>
-        <p className="mb-2">Media Relations</p>
-        <div className="flex items-center mb-2">
-          <PhoneCall className="mr-2 h-4 w-4" />
-          <span>+1 234 567 890</span>
-        </div>
-        <div className="flex items-center">
-          <Mail className="mr-2 h-4 w-4" />
-          <span>jane.doe@burdamedia.com</span>
-        </div>
+      <CardContent className="text-black space-y-2">
+        <p>📚 Tackles information overload with curated EV news.</p>
+        <p>🌍 Promotes eco-friendly transportation and awareness.</p>
+        <p>🕒 Provides trusted, timely, and customizable news articles.</p>
       </CardContent>
     </Card>
   );
 }
 
-export function Podcast() {
+export function Inspiration() {
   return (
     <Card className="bg-teal-100 mb-4">
       <CardHeader>
-        <CardTitle className="text-black font-bold">Latest Podcast</CardTitle>
+        <CardTitle className="text-black font-bold">✨ Inspiration</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-black mb-2">Listen to our latest episode:</p>
-        <p className="text-black font-semibold mb-4">"The Future of Media"</p>
-        <Button className="bg-black text-white hover:bg-black/90">
-          Listen Now
-        </Button>
+      <CardContent className="text-black space-y-2">
+        <p>
+          🚀 Inspired by the challenges of staying informed and encouraging
+          sustainable transport.
+        </p>
+        <p>
+          🤝 Bridges the gap between quality news availability and the need for
+          EV awareness.
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-export function Questions() {
+export function FuturePlans() {
   return (
     <Card className="border-cyan-500 border-2">
       <CardHeader>
-        <CardTitle className="text-black font-bold">Questions?</CardTitle>
+        <CardTitle className="text-black font-bold">🔮 Future Plans</CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-black mb-2">Corporate Communications</p>
-        <p className="text-black mb-2">press@burda.com</p>
-        <p className="text-black">+49 89 9250-2575</p>
+      <CardContent className="text-black space-y-2">
+        <p>🌍 Localized Content Delivery: Trending topics by region.</p>
+        <p>🎙️ Podcast Integration: Auto-generate podcasts from news content.</p>
+        <p>
+          🗺️ Advanced Topic Mapping: Interconnected maps for deeper insights.
+        </p>
       </CardContent>
     </Card>
   );
@@ -75,10 +88,10 @@ export function Questions() {
 export function RightSidebar() {
   return (
     <div className="w-full lg:w-64 space-y-4">
-      <MediaLibrary />
-      <ContactPerson />
-      <Podcast />
-      <Questions />
+      <ProblemSolved />
+      <Inspiration />
+      <KeyFeatures />
+      <FuturePlans />
     </div>
   );
 }
