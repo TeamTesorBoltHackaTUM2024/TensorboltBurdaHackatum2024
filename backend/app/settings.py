@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = os.getenv("QDRANT_HOST", "")
     QDRANT_PORT: str = os.getenv("QDRANT_PORT", "")
     QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
-
+    
+    SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")
 # Exporting for use
 settings = Settings()

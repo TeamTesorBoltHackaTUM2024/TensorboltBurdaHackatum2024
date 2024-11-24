@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 import os
 
-from app.routers import generate, test
+from app.routers import generate, test, evaluate, article
 from app.settings import settings
 
 # App definition
@@ -31,3 +31,8 @@ def root():
 # Routers
 app.include_router(generate.router)
 app.include_router(test.router)
+app.include_router(evaluate.router)
+app.include_router(article.router)
+
+
+
