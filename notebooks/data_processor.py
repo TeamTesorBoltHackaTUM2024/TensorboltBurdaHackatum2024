@@ -2,14 +2,14 @@ from dotenv import load_dotenv
 import os
 
 from newspaper.images import chunk_size
+from settings import settings
 
-load_dotenv()
 
-API_KEY = os.environ["AZURE_OPENAI_API_KEY"]
-AZURE_ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"]
-QDRANT_HOST=os.environ["QDRANT_HOST"]
-QDRANT_PORT=os.environ["QDRANT_PORT"]
-QDRANT_API_KEY=os.environ["QDRANT_API_KEY"]
+API_KEY = settings.AZURE_OPENAI_API_KEY
+AZURE_ENDPOINT = settings.AZURE_OPENAI_ENDPOINT
+QDRANT_HOST=settings.QDRANT_HOST
+QDRANT_PORT=settings.QDRANT_PORT
+QDRANT_API_KEY=settings.QDRANT_API_KEY
 
 
 import feedparser
@@ -193,5 +193,5 @@ if __name__ == "__main__":
     parser = RSSParser(eng_feed_url_1)
     entries = parser.extract_entries_with_content()
 
-    save_entries_to_json(entries, "./rss_feed_entries_1.json")
-    save_entries_to_json(entries, "./rss_feed_entries_2.json")
+    save_entries_to_json(entries, "./rss_feed_entries_3.json")
+    save_entries_to_json(entries, "./rss_feed_entries_4.json")
