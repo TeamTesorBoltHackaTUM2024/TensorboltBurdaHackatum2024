@@ -3,6 +3,8 @@ import io
 import json
 import time
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
+
 from google.cloud import storage
 from PIL import Image
 from moviepy.editor import ImageClip, concatenate_videoclips, CompositeVideoClip, TextClip
@@ -38,6 +40,7 @@ bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins
 
 def upload_to_gcs(file_path, blob_name):
     blob = bucket.blob(blob_name)
