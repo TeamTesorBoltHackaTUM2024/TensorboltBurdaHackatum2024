@@ -1,28 +1,57 @@
 // services/articleService.ts
-import axios from "axios";
+import {
+  ArticleResponse,
+  ArticleCreate,
+  ArticleUpdate,
+  BulkDeleteRequest,
+} from "@/types/articles";
 import { apiClient } from "./axoisConfig";
 
-export const fetchArticles = async () => {
-  const { data } = await apiClient.get("/articles");
+export const fetchArticles = async (): Promise<ArticleResponse[]> => {
+  const { data } = await apiClient.get<ArticleResponse[]>("/articles");
   return data;
 };
 
-export const fetchArticleById = async (id: number) => {
-  const { data } = await apiClient.get(`/articles/${id}`);
+export const fetchArticleById = async (
+  id: number
+): Promise<ArticleResponse> => {
+  const { data } = await apiClient.get<ArticleResponse>(`/articles/${id}`);
   return data;
 };
 
-export const createArticle = async (article: any) => {
-  const { data } = await apiClient.post("/articles", article);
+export const createArticle = async (
+  article: ArticleCreate
+): Promise<ArticleResponse> => {
+  const { data } = await apiClient.post<ArticleResponse>("/articles", article);
   return data;
 };
 
-export const updateArticle = async (id: number, article: any) => {
-  const { data } = await apiClient.put(`/articles/${id}`, article);
+export const updateArticle = async (
+  id: number,
+  article: ArticleUpdate
+): Promise<ArticleResponse> => {
+  const { data } = await apiClient.put<ArticleResponse>(
+    `/articles/${id}`,
+    article
+  );
   return data;
 };
 
-export const deleteArticle = async (id: number) => {
-  const { data } = await apiClient.delete(`/articles/${id}`);
+export const deleteArticle = async (
+  id: number
+): Promise<{ detail: string }> => {
+  const { data } = await apiClient.delete<{ detail: string }>(
+    `/articles/${id}`
+  );
+  return data;
+};
+
+export const bulkDeleteArticles = async (
+  request: BulkDeleteRequest
+): Promise<{ detail: string }> => {
+  const { data } = await apiClient.delete<{ detail: string }>(
+    "/articles/bulk",
+    { data: request }
+  );
   return data;
 };

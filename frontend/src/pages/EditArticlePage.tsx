@@ -34,12 +34,12 @@ export function EditArticlePage() {
   return (
     <div className="p-6 flex flex-col items-center">
       <RichTextEditor
-        value={value || article.content?.title || ""}
+        value={value || article?.content?.title || ""}
         onChange={setValue}
         className="mb-6 w-full max-w-3xl"
       />
-      <Button onClick={handleSubmit} disabled={mutation.isLoading}>
-        {mutation.isLoading ? "Updating..." : "Update"}
+      <Button onClick={handleSubmit} disabled={mutation.isPending}>
+        {mutation.isPending ? "Updating..." : "Update"}
       </Button>
     </div>
   );

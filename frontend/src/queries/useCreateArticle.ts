@@ -8,7 +8,7 @@ const useCreateArticle = () => {
   return useMutation({
     mutationFn: createArticle,
     onSuccess: () => {
-      queryClient.invalidateQueries(["articles"]);
+      queryClient.invalidateQueries({ queryKey: ["articles"] });
     },
   });
 };

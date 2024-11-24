@@ -1,13 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { HomePage } from "./pages/HomePage";
-import { ArticlePage } from "./pages/ArticlePage";
+// import { ArticlePage } from "./pages/ArticlePage";
 import { RootLayout } from "./layouts/RootLayout";
 import { TrendPage } from "./pages/TrendPage";
 import { Toaster } from "./components/ui/toaster";
 // import { ArticleGenerator } from "./customcomponents/AIArticleGenerator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CreateArticlePage } from "./pages/CreateArticlePage";
-import { EditArticlePage } from "./pages/EditArticlePage";
+// import { CreateArticlePage } from "./pages/CreateArticlePage";
+// import { EditArticlePage } from "./pages/EditArticlePage";
+import EditorPage from "./pages/EditorPage";
 
 export function App() {
   const twentyFourHoursInMs = 1000 * 60 * 60 * 24;
@@ -28,16 +29,20 @@ export function App() {
       <Router>
         <Routes>
           <Route path="/" element={<RootLayout />}>
+            <Route path="/dashboard" element={<EditorPage />} />
+
+            {/*  */}
             <Route index element={<HomePage />} />
 
-            <Route path="/article/:id" element={<ArticlePage />} />
+            {/* <Route path="/article/:id" element={<ArticlePage />} />
             <Route path="/article/new" element={<CreateArticlePage />} />
-            <Route path="/article/edit/:id" element={<EditArticlePage />} />
+            <Route path="/article/edit/:id" element={<EditArticlePage />} /> */}
+            {/*  */}
 
-            {/* <Route path="article/:id" element={<ArticlePage />} /> */}
-            {/* <Route path="trend/:id" element={<ArticlePage />} /> */}
-
-            {/* <Route
+            {/* <Route path="article/:id" element={<ArticlePage />} />
+            <Route path="trend/:id" element={<ArticlePage />} /> */}
+{/* 
+            <Route
               path="mann"
               element={
                 <ArticleGenerator

@@ -4,7 +4,7 @@ import os
 from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
 
-load_dotenv()
+load_dotenv("backend/app/.env")
 
 class Settings(BaseSettings):
 
