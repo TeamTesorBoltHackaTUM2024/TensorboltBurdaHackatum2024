@@ -9,6 +9,11 @@ In today's modern world, we are inundated with an overwhelming amount of informa
 Tensorbolt continuously and automatically parses RSS feeds, analyzing and enriching the data with advanced language models (LLMs). It identifies the most trending news in the electric vehicle sector by scoring and ranking the feeds. Based on the reliable and thoroughly analyzed data collected by our system, Tensorbolt generates unique, customizable articles. These articles are then published and shared across various platforms, ensuring that users receive high-quality, up-to-date information on electric cars
 
 ## How we built it
+
+<img width="1075" alt="image" src="https://github.com/user-attachments/assets/8e401169-c2f0-4c93-952f-b25353396b97" />
+
+<img width="1075" alt="image" src="https://github.com/user-attachments/assets/649741e4-d18e-460f-90ee-80c31020304c" />
+
 1. We developed Tensorbolt using a multi-layered approach to ensure efficient data parsing, analysis, and content generation:
 
 2. RSS Feed Parsing: Our system employs an RSS feed parser to collect all necessary information from each feed, including links to the original websites where the news articles are published. We then parse these websites to extract the full text of each news article.
@@ -26,6 +31,9 @@ Tensorbolt continuously and automatically parses RSS feeds, analyzing and enrich
 8. Automated Pipeline: The entire content generation pipeline consists of multiple stages that automatically verify and cross-reference information with the facts stored in our system, ensuring accuracy and reliability in every article produced.
 
 9. Media Generation: Images and a short style video can be generated with the help GPT and DALL-E 3, some well worded prompts and clever video generation.
+
+## Deployment
+<img width="1075" alt="image" src="https://github.com/user-attachments/assets/ad31a654-d350-4034-a58c-d18aec04d095" />
 
 ## Challenges we ran into
 One of the primary challenges we faced was managing our time effectively to keep up with new ideas without diluting our focus, all while ensuring the high-quality implementation of our core functionalities. We had numerous exciting concepts, such as automatically generating relevant podcasts and enabling interactive article editing, in addition to our main objectives. However, limited time forced us to prioritize and concentrate on the most critical aspects of the project.
